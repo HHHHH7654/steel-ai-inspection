@@ -1,11 +1,21 @@
-import { redirect } from "next/navigation";
-import { chatGPTSignInPath, getChatGPTUser } from "../chatgpt-auth";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { FormEvent, useState } from "react";
 
-export default async function LoginPage() {
-  const user = await getChatGPTUser();
-  if (user) redirect("/");
+export default function LoginPage() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const signIn = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (username === "admin" && password === "admin123") {
+      sessionStorage.setItem("steelvision_demo_account", "admin");
+      window.location.assign("/");
+      return;
+    }
+    setError("账号或密码错误，请重新输入。");
+  };
 
   return (
     <main className="login-page">
@@ -20,15 +30,18 @@ export default async function LoginPage() {
         <div className="login-steel-band"><span /></div>
       </section>
       <section className="login-card-wrap">
-        <div className="login-card">
+        <form className="login-card" onSubmit={signIn}>
           <div className="login-logo"><span className="brand-mark"><i /><i /><i /></span><strong>SteelVision</strong></div>
-          <p className="eyebrow">SECURE ACCESS · 平台统一身份认证</p>
+          <p className="eyebrow">SECURE ACCESS · 系统登录</p>
           <h2>登录系统</h2>
-          <p className="login-description">使用平台账户完成身份验证后，即可进入热轧钢带划痕识别管理平台。</p>
-          <a className="login-button" href={chatGPTSignInPath("/")}>使用 ChatGPT 登录 <span>→</span></a>
-          <div className="login-notice"><span>✓</span><p>系统采用平台统一身份认证；用户身份与访问权限在服务端校验，不在浏览器中保存密码。</p></div>
+          <p className="login-description">请输入系统管理员账号和密码，登录后可使用图片检测、摄像头接入与系统管理功能。</p>
+          <label className="login-field"><span>账号</span><input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="请输入账号" autoComplete="username" required /></label>
+          <label className="login-field"><span>密码</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="请输入密码" autoComplete="current-password" required /></label>
+          {error && <p className="login-error" role="alert">{error}</p>}
+          <button className="login-button" type="submit">登录系统 <span>→</span></button>
+          <div className="login-notice"><span>i</span><p>当前原型账号：<strong>admin</strong>；密码：<strong>admin123</strong>。正式部署时应由 FastAPI + JWT 在服务端完成认证。</p></div>
           <footer>SteelVision · 智能质检平台</footer>
-        </div>
+        </form>
       </section>
     </main>
   );

@@ -39,6 +39,8 @@ function ResultPreview({ isReady, imageName }: { isReady: boolean; imageName: st
 }
 
 export default function Home() {
+  const [authReady, setAuthReady] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const [active, setActive] = useState<NavKey>("dashboard");
   const [selectedFile, setSelectedFile] = useState("");
   const [isDetected, setIsDetected] = useState(false);
@@ -111,7 +113,14 @@ export default function Home() {
     setCapturedFrame(canvas.toDataURL("image/jpeg", 0.9));
     notify("已截取当前画面；接入模型服务后可自动提交识别任务。");
   };
-  useEffect(() => () => { streamRef.current?.getTracks().forEach((track) => track.stop()); }, []);
+  useEffect(() => {
+    setAuthenticated(sessionStorage.getItem("steelvision_demo_account") === "admin");
+    setAuthReady(true);
+    return () => { streamRef.current?.getTracks().forEach((track) => track.stop()); };
+  }, []);
+  useEffect(() => {
+    if (authReady && !authenticated) window.location.replace("/login");
+  }, [authReady, authenticated]);
   const onImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -167,10 +176,17 @@ export default function Home() {
 
   const content = active === "dashboard" ? renderDashboard() : active === "detect" ? renderDetect() : active === "batch" ? renderBatch() : active === "camera" ? renderCamera() : active === "history" ? renderHistory() : active === "models" ? renderModels() : renderSettings();
 
+  if (!authReady || !authenticated) return <main className="auth-splash">正在验证登录状态…</main>;
+  const signOut = () => {
+    stopCamera();
+    sessionStorage.removeItem("steelvision_demo_account");
+    setAuthenticated(false);
+  };
+
   return (
     <main className="app-shell">
-      <aside className="sidebar"><div className="brand"><span className="brand-mark"><i /><i /><i /></span><div><strong>SteelVision</strong><small>智能质检平台</small></div></div><nav aria-label="主导航">{navItems.map((item, index) => <div key={item.key}>{item.group && <p className="nav-group">{item.group}</p>}<button className={active === item.key ? "nav-item active" : "nav-item"} onClick={() => { if (item.key !== "camera") stopCamera(); setActive(item.key); }}><span>{item.icon}</span>{item.label}</button>{index === 4 && <p className="nav-group">系统管理</p>}</div>)}</nav><div className="sidebar-bottom"><div className="data-source"><span>◎</span><div><strong>NEU-DET</strong><small>待导入的热轧钢带缺陷数据</small></div></div><div className="user-card"><span className="avatar">人</span><div><strong>平台账户</strong><small>统一身份认证</small></div><a className="signout-link" href="/signout-with-chatgpt?return_to=%2Flogin">退出</a></div></div></aside>
-      <section className="main-area"><header className="topbar"><div className="crumb">热轧钢带表面划痕识别 <span>/</span> {activeLabel}</div><div className="top-actions"><span className="api-pill">API 服务正常</span><a className="account-link" href="/login">账户登录</a><button aria-label="通知" className="icon-button">♧<b /></button><button aria-label="帮助" className="icon-button">?</button></div></header><div className="content">{content}</div></section>
+      <aside className="sidebar"><div className="brand"><span className="brand-mark"><i /><i /><i /></span><div><strong>SteelVision</strong><small>智能质检平台</small></div></div><nav aria-label="主导航">{navItems.map((item, index) => <div key={item.key}>{item.group && <p className="nav-group">{item.group}</p>}<button className={active === item.key ? "nav-item active" : "nav-item"} onClick={() => { if (item.key !== "camera") stopCamera(); setActive(item.key); }}><span>{item.icon}</span>{item.label}</button>{index === 4 && <p className="nav-group">系统管理</p>}</div>)}</nav><div className="sidebar-bottom"><div className="data-source"><span>◎</span><div><strong>NEU-DET</strong><small>待导入的热轧钢带缺陷数据</small></div></div><div className="user-card"><span className="avatar">管</span><div><strong>admin</strong><small>系统管理员</small></div><button className="signout-link" onClick={signOut}>退出</button></div></div></aside>
+      <section className="main-area"><header className="topbar"><div className="crumb">热轧钢带表面划痕识别 <span>/</span> {activeLabel}</div><div className="top-actions"><span className="api-pill">API 服务正常</span><span className="account-link">账号：admin</span><button aria-label="通知" className="icon-button">♧<b /></button><button aria-label="帮助" className="icon-button">?</button></div></header><div className="content">{content}</div></section>
       {toast && <div className="toast" role="status">✓ {toast}</div>}
     </main>
   );
